@@ -4,9 +4,9 @@ import requests
 import openai
 import json
 
-with open('keys.json', 'r') as f:
-    KEYS = json.loads(f.read())
-    f.close()
+# with open('keys.json', 'r') as f:
+#     KEYS = json.loads(f.read())
+#     f.close()
 
 class Item(BaseModel):
     entry: list
