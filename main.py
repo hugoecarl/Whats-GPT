@@ -4,15 +4,21 @@ import requests
 import openai
 import json
 import os
+import redis
+import ast
 
+r = redis.Redis(
+    host=os.environ.get('REDISHOST'),
+    port=os.environ.get('REDISPORT'), 
+    password=os.environ.get('REDISPASSWORD'))
 class Item(BaseModel):
     entry: list
 
 app = FastAPI()
 
-@app.get("/test")
+@app.get("/teste")
 def read_root(request: Request):
-    return os.environ.get('AUTH_TOKEN_WHATS')
+    return r.get('foo')
 
 @app.get("/api")
 def read_root(request: Request):
@@ -22,10 +28,9 @@ def read_root(request: Request):
 def create_item(item: Item):
 
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
+    phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
-    with open('chat.json', 'r') as f:
-        messages = json.loads(f.read())
-        f.close()
+    messages = ast.literal_eval(r.get(phone_number).decode('latin1'))
     messages.append({"role": "user", "content": f"{user_message}"})
 
     openai.api_key = os.environ.get('OPEN_AI_KEY')
@@ -39,7 +44,7 @@ def create_item(item: Item):
     header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
     payload = {
         "messaging_product": "whatsapp",
-        "to": item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id'],
+        "to": phone_number,
         "type": "text",
         "text": {
             "body": f"{ai_message}"
@@ -50,7 +55,6 @@ def create_item(item: Item):
 
     messages.append({"role": "assistant", "content": f"{ai_message}"})
 
-    with open('chat.json', 'w') as f:
-        json.dump(messages, f, indent=4)
+    r.set(phone_number, messages)
 
-    return item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
+    return 200
