@@ -5,6 +5,11 @@ import openai
 import os
 import redis as redis_lib
 import ast
+
+redis = redis_lib.Redis(
+    host=os.environ.get('REDISHOST'),
+    port=os.environ.get('REDISPORT'), 
+    password=os.environ.get('REDISPASSWORD'))
 class Item(BaseModel):
     entry: list
 
@@ -21,11 +26,6 @@ def read_root(request: Request):
 @app.post("/api")
 def create_item(item: Item):
 
-    redis = redis_lib.Redis(
-    host=os.environ.get('REDISHOST'),
-    port=os.environ.get('REDISPORT'), 
-    password=os.environ.get('REDISPASSWORD'))
-    
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
