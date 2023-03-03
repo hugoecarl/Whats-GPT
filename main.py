@@ -5,10 +5,6 @@ import openai
 import json
 import os
 
-# with open('keys.json', 'r') as f:
-#     KEYS = json.loads(f.read())
-#     f.close()
-
 class Item(BaseModel):
     entry: list
 
@@ -32,7 +28,7 @@ def create_item(item: Item):
         f.close()
     messages.append({"role": "user", "content": f"{user_message}"})
 
-    openai.api_key = KEYS['OPEN_AI_KEY']
+    openai.api_key = os.environ.get('OPEN_AI_KEY')
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=messages
@@ -40,7 +36,7 @@ def create_item(item: Item):
     
     ai_message = response.get('choices')[0].get('message').get('content').strip()
 
-    header = {"Authorization": f"Bearer {KEYS['AUTH_TOKEN_WHATS']}"}
+    header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
     payload = {
         "messaging_product": "whatsapp",
         "to": item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id'],
