@@ -29,15 +29,15 @@ def create_item(item: Item):
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
-    if redis.exists(phone_number):
+    if not redis.exists(phone_number) or user_message == 'reset chat':
+            # If telephone doesn't exist, set its value
+            system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
+            redis.set(phone_number, str(system_prompt))
+            raw_value = redis.get(phone_number)
+    elif redis.exists(phone_number):
         # If telephone exists, get its value
         raw_value = redis.get(phone_number)
-    elif not redis.exists(phone_number) or user_message == 'reset chat':
-        # If telephone doesn't exist, set its value
-        system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
-        redis.set(phone_number, str(system_prompt))
-        raw_value = redis.get(phone_number)
-
+    
     messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
     messages.append({"role": "user", "content": f"{user_message}"})
 
