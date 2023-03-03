@@ -54,6 +54,6 @@ def create_item(item: Item):
 
     messages.append({"role": "assistant", "content": f"{ai_message}"})
 
-    redis.set(phone_number, messages)
+    redis.set(phone_number, str(messages))
 
     return 200
