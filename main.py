@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import requests
 import openai
 import json
+import os
 
 # with open('keys.json', 'r') as f:
 #     KEYS = json.loads(f.read())
@@ -12,6 +13,10 @@ class Item(BaseModel):
     entry: list
 
 app = FastAPI()
+
+@app.get("/test")
+def read_root(request: Request):
+    return os.environ.get('AUTH_TOKEN_WHATS')
 
 @app.get("/api")
 def read_root(request: Request):
