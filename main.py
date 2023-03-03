@@ -29,7 +29,7 @@ def create_item(item: Item):
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
-    messages = ast.literal_eval(redis.get(phone_number).decode('latin1'))
+    messages = ast.literal_eval(redis.get(phone_number).decode('utf-8-sig'))
     messages.append({"role": "user", "content": f"{user_message}"})
 
     openai.api_key = os.environ.get('OPEN_AI_KEY')
