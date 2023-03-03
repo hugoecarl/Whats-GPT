@@ -2,15 +2,9 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import requests
 import openai
-import json
 import os
-import redis
+import redis as redis_lib
 import ast
-
-r = redis.Redis(
-    host=os.environ.get('REDISHOST'),
-    port=os.environ.get('REDISPORT'), 
-    password=os.environ.get('REDISPASSWORD'))
 class Item(BaseModel):
     entry: list
 
@@ -18,7 +12,7 @@ app = FastAPI()
 
 @app.get("/teste")
 def read_root(request: Request):
-    return r.get('foo')
+    return redis.get('foo')
 
 @app.get("/api")
 def read_root(request: Request):
@@ -27,10 +21,15 @@ def read_root(request: Request):
 @app.post("/api")
 def create_item(item: Item):
 
+    redis = redis_lib.Redis(
+    host=os.environ.get('REDISHOST'),
+    port=os.environ.get('REDISPORT'), 
+    password=os.environ.get('REDISPASSWORD'))
+    
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
-    messages = ast.literal_eval(r.get(phone_number).decode('latin1'))
+    messages = ast.literal_eval(redis.get(phone_number).decode('latin1'))
     messages.append({"role": "user", "content": f"{user_message}"})
 
     openai.api_key = os.environ.get('OPEN_AI_KEY')
@@ -55,6 +54,6 @@ def create_item(item: Item):
 
     messages.append({"role": "assistant", "content": f"{ai_message}"})
 
-    r.set(phone_number, messages)
+    redis.set(phone_number, messages)
 
     return 200
