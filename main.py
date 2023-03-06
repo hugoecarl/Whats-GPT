@@ -6,23 +6,28 @@ import os
 import redis as redis_lib
 import ast
 
+# Init Redis connection
 redis = redis_lib.Redis(
     host=os.environ.get('REDISHOST'),
     port=os.environ.get('REDISPORT'), 
     password=os.environ.get('REDISPASSWORD'))
+    
+# Webhook object format
 class Item(BaseModel):
     entry: list
 
+# Fast api instance
 app = FastAPI()
 
+# Whatsapp api authentication
 @app.get("/api")
 def read_root(request: Request):
     return int(request.query_params.get('hub.challenge'))
 
+# OpenWhats main route
 @app.post("/api")
 def create_item(item: Item):
 
-    return item
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
@@ -35,17 +40,21 @@ def create_item(item: Item):
         # If telephone exists, get its value
         raw_value = redis.get(phone_number)
     
+    # get last messages
     messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
     messages.append({"role": "user", "content": f"{user_message}"})
 
+    # openAI init
     openai.api_key = os.environ.get('OPEN_AI_KEY')
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
     
+    # Get gpt response 
     ai_message = response.get('choices')[0].get('message').get('content').strip()
 
+    # Create header and payload whatsapp api
     header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
     payload = {
         "messaging_product": "whatsapp",
@@ -56,10 +65,13 @@ def create_item(item: Item):
         }
     }
 
+    # Calling whatsapp api
     r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
 
+    # Append message to list
     messages.append({"role": "assistant", "content": f"{ai_message}"})
 
+    # Upload messages to redis db
     redis.set(phone_number, str(messages))
 
-    return item
+    return 200
