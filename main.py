@@ -22,6 +22,7 @@ def read_root(request: Request):
 @app.post("/api")
 def create_item(item: Item):
 
+    return item
     user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
