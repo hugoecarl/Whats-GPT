@@ -15,10 +15,6 @@ class Item(BaseModel):
 
 app = FastAPI()
 
-@app.get("/teste")
-def read_root(request: Request):
-    return redis.get('foo')
-
 @app.get("/api")
 def read_root(request: Request):
     return int(request.query_params.get('hub.challenge'))
@@ -65,4 +61,4 @@ def create_item(item: Item):
 
     redis.set(phone_number, str(messages))
 
-    return 200
+    return item
