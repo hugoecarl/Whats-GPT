@@ -32,31 +32,31 @@ def read_root(request: Request):
 @app.post("/api")
 def create_item(item: Item):
 
-    user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
+    # user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
     phone_number = item.entry[0]['changes'][0]['value']['contacts'][0]['wa_id']
 
-    if not redis.exists(phone_number) or user_message == 'reset chat':
-            # If telephone doesn't exist, set its value
-            system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
-            redis.set(phone_number, str(system_prompt))
-            raw_value = redis.get(phone_number)
-    elif redis.exists(phone_number):
-        # If telephone exists, get its value
-        raw_value = redis.get(phone_number)
+    # if not redis.exists(phone_number) or user_message == 'reset chat':
+    #         # If telephone doesn't exist, set its value
+    #         system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
+    #         redis.set(phone_number, str(system_prompt))
+    #         raw_value = redis.get(phone_number)
+    # elif redis.exists(phone_number):
+    #     # If telephone exists, get its value
+    #     raw_value = redis.get(phone_number)
     
-    # get last messages
-    messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
-    messages.append({"role": "user", "content": f"{user_message}"})
+    # # get last messages
+    # messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
+    # messages.append({"role": "user", "content": f"{user_message}"})
 
-    # openAI init
-    openai.api_key = os.environ.get('OPEN_AI_KEY')
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages
-    )
+    # # openAI init
+    # openai.api_key = os.environ.get('OPEN_AI_KEY')
+    # response = openai.ChatCompletion.create(
+    #     model="gpt-3.5-turbo",
+    #     messages=messages
+    # )
     
-    # Get gpt response 
-    ai_message = response.get('choices')[0].get('message').get('content').strip()
+    # # Get gpt response 
+    # ai_message = response.get('choices')[0].get('message').get('content').strip()
 
     # Create header and payload whatsapp api
     header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
@@ -73,9 +73,9 @@ def create_item(item: Item):
     r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
 
     # Append message to list
-    messages.append({"role": "assistant", "content": f"{ai_message}"})
+    # messages.append({"role": "assistant", "content": f"{ai_message}"})
 
-    # Upload messages to redis db
-    redis.set(phone_number, str(messages))
+    # # Upload messages to redis db
+    # redis.set(phone_number, str(messages))
 
     return 200
