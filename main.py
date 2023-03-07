@@ -65,7 +65,7 @@ def create_item(item: Item):
         "to": phone_number,
         "type": "text",
         "text": {
-            "body": f"{ai_message}"
+            "body": f"{item}"
         }
     }
 
