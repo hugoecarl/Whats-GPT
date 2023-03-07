@@ -19,6 +19,10 @@ class Item(BaseModel):
 # Fast api instance
 app = FastAPI()
 
+@app.get("/test")
+def read_root(item: Item):
+    return item
+
 # Whatsapp api authentication
 @app.get("/api")
 def read_root(request: Request):
