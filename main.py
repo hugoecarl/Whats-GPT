@@ -103,6 +103,7 @@ def create_item(item: Item):
             raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
 
         if raw_value['command'] == 'image':
+            # openAI Dalle
             response = openai.Image.create(
             prompt=f"{user_message}",
             n=1,
@@ -110,22 +111,11 @@ def create_item(item: Item):
             )
             image_url = response['data'][0]['url']
 
-            header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
-            payload = {
-                "messaging_product": "whatsapp",
-                "to": phone_number,
-                "type": "image",
-                "image": {
-                    "link": f"{image_url}"
-                }
-            }
-
-            # Calling whatsapp api
-            r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+            send_message(phone_number, image_url, 'image')
         
         elif raw_value['command'] == 'text':
             # get last messages
-            messages = json.loads(raw_value)['prompt']
+            messages = raw_value['prompt']
             messages.append({"role": "user", "content": f"{user_message}"})
 
             # openAI chat completition
