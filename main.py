@@ -21,6 +21,8 @@ class Item(BaseModel):
 # Fast api instance
 app = FastAPI()
 
+openai.api_key = os.environ.get('OPEN_AI_KEY')
+
 # Whatsapp api authentication
 @app.get("/api")
 def read_root(request: Request):
@@ -77,8 +79,7 @@ def create_item(item: Item):
         messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
         messages.append({"role": "user", "content": f"{user_message}"})
 
-        # openAI init
-        openai.api_key = os.environ.get('OPEN_AI_KEY')
+        # openAI chat completition
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages
