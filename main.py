@@ -7,21 +7,37 @@ import io
 import redis as redis_lib
 import ast
 from pydub import AudioSegment
+import json
 
 # Init Redis connection
 redis = redis_lib.Redis(
     host=os.environ.get('REDISHOST'),
     port=os.environ.get('REDISPORT'), 
     password=os.environ.get('REDISPASSWORD'))
+
+openai.api_key = os.environ.get('OPEN_AI_KEY')
     
+def send_message(phone_number, input, type):
+        # Create header and payload whatsapp api
+    header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": f"{type}",
+        f"{type}": {
+            f"{'body' if type == 'text' else 'link'}": f"{input}"
+        }
+    }
+
+    # Calling whatsapp api
+    r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+
 # Webhook object format
 class Item(BaseModel):
     entry: list
 
 # Fast api instance
 app = FastAPI()
-
-openai.api_key = os.environ.get('OPEN_AI_KEY')
 
 # Whatsapp api authentication
 @app.get("/api")
@@ -62,70 +78,71 @@ def create_item(item: Item):
         # Calling whatsapp api
         r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
 
-    else:
+    elif item.entry[0]['changes'][0]['value']['messages'][0]['type'] == 'text':
 
         user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
 
-        response = openai.Image.create(
-        prompt=f"{user_message}",
-        n=1,
-        size="1024x1024"
-        )
-        image_url = response['data'][0]['url']
-
-        header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": phone_number,
-            "type": "image",
-            "image": {
-                "link": f"{image_url}"
-            }
-        }
-
-        # Calling whatsapp api
-        r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
-
-        if not redis.exists(phone_number) or user_message == 'reset chat':
+        if not redis.exists(phone_number):
                 # If telephone doesn't exist, set its value
-                system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
-                redis.set(phone_number, str(system_prompt))
+                init_user = {'command':'text','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
+                redis.set(phone_number, json.dumps(init_user))
                 raw_value = redis.get(phone_number)
         elif redis.exists(phone_number):
             # If telephone exists, get its value
             raw_value = redis.get(phone_number)
-        
-        # get last messages
-        messages = ast.literal_eval(raw_value.decode('utf-8-sig'))
-        messages.append({"role": "user", "content": f"{user_message}"})
 
-        # openAI chat completition
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
-        
-        # Get gpt response 
-        ai_message = response.get('choices')[0].get('message').get('content').strip()
+        if user_message == 'image':
+            raw_value['command'] = 'image'
+            return 200 
+        elif user_message == 'text':
+            raw_value['command'] = 'text' 
+            return 200 
+        elif user_message == 'reset chat':
+            raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
 
-        # Create header and payload whatsapp api
-        header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": phone_number,
-            "type": "text",
-            "text": {
-                "body": f"{ai_message}"
+        if raw_value['command'] == 'image':
+            response = openai.Image.create(
+            prompt=f"{user_message}",
+            n=1,
+            size="1024x1024"
+            )
+            image_url = response['data'][0]['url']
+
+            header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": phone_number,
+                "type": "image",
+                "image": {
+                    "link": f"{image_url}"
+                }
             }
-        }
 
-        # Calling whatsapp api
-        r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+            # Calling whatsapp api
+            r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+        
+        elif raw_value['command'] == 'text':
+            # get last messages
+            messages = json.loads(raw_value)['prompt']
+            messages.append({"role": "user", "content": f"{user_message}"})
 
-        # Append message to list
-        messages.append({"role": "assistant", "content": f"{ai_message}"})
+            # openAI chat completition
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+            
+            # Get gpt response 
+            ai_message = response.get('choices')[0].get('message').get('content').strip()
 
-        # Upload messages to redis db
-        redis.set(phone_number, str(messages))
+            # Send message
+            send_message(phone_number, ai_message, 'text')
+
+            # Append message to list
+            messages.append({"role": "assistant", "content": f"{ai_message}"})
+            raw_value['prompt'] = messages
+
+            # Upload messages to redis db
+            redis.set(phone_number, json.dumps(raw_value))
 
     return 200
