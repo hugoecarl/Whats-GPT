@@ -66,6 +66,26 @@ def create_item(item: Item):
 
         user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
 
+        response = openai.Image.create(
+        prompt=f"{user_message}",
+        n=1,
+        size="1024x1024"
+        )
+        image_url = response['data'][0]['url']
+
+        header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone_number,
+            "type": "image",
+            "image": {
+                "link": f"{image_url}"
+            }
+        }
+
+        # Calling whatsapp api
+        r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+
         if not redis.exists(phone_number) or user_message == 'reset chat':
                 # If telephone doesn't exist, set its value
                 system_prompt = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
