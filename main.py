@@ -5,7 +5,6 @@ import openai
 import os
 import io
 import redis as redis_lib
-import ast
 from pydub import AudioSegment
 import json
 
@@ -30,7 +29,7 @@ def send_message(phone_number, input, type):
     }
 
     # Calling whatsapp api
-    r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+    r = requests.post(f"https://graph.facebook.com/v15.0/{os.environ.get('WHATS_ID')}/messages", json=payload, headers=header)
 
 # Webhook object format
 class Item(BaseModel):
@@ -64,19 +63,7 @@ def create_item(item: Item):
 
         transcript = openai.Audio.transcribe("whisper-1", buf)
 
-        # Create header and payload whatsapp api
-        header = {"Authorization": f"Bearer {os.environ.get('AUTH_TOKEN_WHATS')}"}
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": phone_number,
-            "type": "text",
-            "text": {
-                "body": f"{transcript['text']}"
-            }
-        }
-
-        # Calling whatsapp api
-        r = requests.post('https://graph.facebook.com/v15.0/105624622440704/messages', json=payload, headers=header)
+        send_message(phone_number, transcript['text'], 'text')
 
     elif item.entry[0]['changes'][0]['value']['messages'][0]['type'] == 'text':
 
