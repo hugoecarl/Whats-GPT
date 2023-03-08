@@ -60,7 +60,7 @@ def create_item(item: Item):
         ogg_audio = AudioSegment.from_file(io.BytesIO(redis.get('test_audio')), format="ogg")
         buf = io.BytesIO()
         ogg_audio.export(buf, format='mp3')
-        buf.name= 'mem.mp3'
+        buf.name = 'mem.mp3'
 
         transcript = openai.Audio.transcribe("whisper-1", buf)
 
@@ -86,10 +86,10 @@ def create_item(item: Item):
                 # If telephone doesn't exist, set its value
                 init_user = {'command':'text','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
                 redis.set(phone_number, json.dumps(init_user))
-                raw_value = redis.get(phone_number)
+                raw_value = json.loads(redis.get(phone_number))
         elif redis.exists(phone_number):
             # If telephone exists, get its value
-            raw_value = redis.get(phone_number)
+            raw_value = json.loads(redis.get(phone_number))
 
         if user_message == 'image':
             raw_value['command'] = 'image'
