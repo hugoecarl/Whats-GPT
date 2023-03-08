@@ -17,3 +17,4 @@ websockets==10.4
 openai
 redis
 pydub
+ffprobe
