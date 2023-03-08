@@ -93,9 +93,11 @@ def create_item(item: Item):
 
         if user_message == 'image':
             raw_value['command'] = 'image'
+            redis.set(phone_number, json.dumps(raw_value))
             return 200 
         elif user_message == 'text':
             raw_value['command'] = 'text' 
+            redis.set(phone_number, json.dumps(raw_value))
             return 200 
         elif user_message == 'reset chat':
             raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
