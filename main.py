@@ -39,7 +39,7 @@ def create_item(item: Item):
         audio = requests.get(url_audio, headers=header).content
         redis.set('test_audio', audio)
 
-        ogg_audio = AudioSegment.from_file(io.BytesIO(r.get('test_audio')), format="ogg")
+        ogg_audio = AudioSegment.from_file(io.BytesIO(redis.get('test_audio')), format="ogg")
         buf = io.BytesIO()
         ogg_audio.export(buf, format='mp3')
         buf.name= 'mem.mp3'
