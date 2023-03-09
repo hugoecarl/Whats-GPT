@@ -77,13 +77,28 @@ def create_item(item: Item):
         # If telephone exists, get its value
         raw_value = json.loads(redis.get(phone_number))
 
-    if user_message[:4] == '/use':
+    if user_message[:5] == '/use ':
         raw_value['command'] = user_message.split(' ')[-1]
         redis.set(phone_number, json.dumps(raw_value))
         send_message(phone_number, 'Ok!', 'text')
         return 200 
-    elif user_message[:11] == '/reset chat':
+    elif user_message[:11] == '/list chat ':
+        prompts = list(raw_value.keys())
+        prompts.remove('command')
+        send_message(phone_number, str(prompts), 'text')
+        return 200 
+    elif user_message[:12] == '/reset chat ' or user_message[:13] == '/create chat ':
         raw_value[user_message.split(' ')[-1]] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
+        send_message(phone_number, 'Ok!', 'text')
+        return 200 
+    elif user_message[:13] == '/delete chat ':
+        raw_value.pop(user_message.split(' ')[-1], None)
+        redis.set(phone_number, json.dumps(raw_value))
+        send_message(phone_number, 'Ok!', 'text')
+        return 200 
+    elif user_message[:5] == '/help':
+        send_message(phone_number, 'HELP MENU!', 'text')
+
 
     if raw_value['command'] == 'image':
         # openAI Dalle
