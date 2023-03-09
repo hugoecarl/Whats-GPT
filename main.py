@@ -64,64 +64,63 @@ def create_item(item: Item):
         transcript = openai.Audio.transcribe("whisper-1", buf)
 
         send_message(phone_number, transcript['text'], 'text')
-
-    elif item.entry[0]['changes'][0]['value']['messages'][0]['type'] == 'text':
-
+        user_message = transcript['text']
+    else: 
         user_message = item.entry[0]['changes'][0]['value']['messages'][0]['text']['body']
 
-        if not redis.exists(phone_number):
-                # If telephone doesn't exist, set its value
-                init_user = {'command':'text','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
-                redis.set(phone_number, json.dumps(init_user))
-                raw_value = json.loads(redis.get(phone_number))
-        elif redis.exists(phone_number):
-            # If telephone exists, get its value
+    if not redis.exists(phone_number):
+            # If telephone doesn't exist, set its value
+            init_user = {'command':'text','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
+            redis.set(phone_number, json.dumps(init_user))
             raw_value = json.loads(redis.get(phone_number))
+    elif redis.exists(phone_number):
+        # If telephone exists, get its value
+        raw_value = json.loads(redis.get(phone_number))
 
-        if user_message == 'image':
-            raw_value['command'] = 'image'
-            redis.set(phone_number, json.dumps(raw_value))
-            return 200 
-        elif user_message == 'text':
-            raw_value['command'] = 'text' 
-            redis.set(phone_number, json.dumps(raw_value))
-            return 200 
-        elif user_message == 'reset chat':
-            raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
+    if user_message == 'image':
+        raw_value['command'] = 'image'
+        redis.set(phone_number, json.dumps(raw_value))
+        return 200 
+    elif user_message == 'text':
+        raw_value['command'] = 'text' 
+        redis.set(phone_number, json.dumps(raw_value))
+        return 200 
+    elif user_message == 'reset chat':
+        raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
 
-        if raw_value['command'] == 'image':
-            # openAI Dalle
-            response = openai.Image.create(
-            prompt=f"{user_message}",
-            n=1,
-            size="1024x1024"
-            )
-            image_url = response['data'][0]['url']
+    if raw_value['command'] == 'image':
+        # openAI Dalle
+        response = openai.Image.create(
+        prompt=f"{user_message}",
+        n=1,
+        size="1024x1024"
+        )
+        image_url = response['data'][0]['url']
 
-            send_message(phone_number, image_url, 'image')
+        send_message(phone_number, image_url, 'image')
+    
+    elif raw_value['command'] == 'text':
+        # get last messages
+        messages = raw_value['prompt']
+        messages.append({"role": "user", "content": f"{user_message}"})
+
+        # openAI chat completition
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
         
-        elif raw_value['command'] == 'text':
-            # get last messages
-            messages = raw_value['prompt']
-            messages.append({"role": "user", "content": f"{user_message}"})
+        # Get gpt response 
+        ai_message = response.get('choices')[0].get('message').get('content').strip()
 
-            # openAI chat completition
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages
-            )
-            
-            # Get gpt response 
-            ai_message = response.get('choices')[0].get('message').get('content').strip()
+        # Send message
+        send_message(phone_number, ai_message, 'text')
 
-            # Send message
-            send_message(phone_number, ai_message, 'text')
+        # Append message to list
+        messages.append({"role": "assistant", "content": f"{ai_message}"})
+        raw_value['prompt'] = messages
 
-            # Append message to list
-            messages.append({"role": "assistant", "content": f"{ai_message}"})
-            raw_value['prompt'] = messages
-
-            # Upload messages to redis db
-            redis.set(phone_number, json.dumps(raw_value))
+        # Upload messages to redis db
+        redis.set(phone_number, json.dumps(raw_value))
 
     return 200
