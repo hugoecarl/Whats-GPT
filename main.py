@@ -77,16 +77,13 @@ def create_item(item: Item):
         # If telephone exists, get its value
         raw_value = json.loads(redis.get(phone_number))
 
-    if user_message == 'image':
-        raw_value['command'] = 'image'
+    if user_message[:4] == '/use':
+        raw_value['command'] = user_message.split(' ')[-1]
         redis.set(phone_number, json.dumps(raw_value))
+        send_message(phone_number, 'Ok!', 'text')
         return 200 
-    elif user_message == 'text':
-        raw_value['command'] = 'text' 
-        redis.set(phone_number, json.dumps(raw_value))
-        return 200 
-    elif user_message == 'reset chat':
-        raw_value['prompt'] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
+    elif user_message[:11] == '/reset chat':
+        raw_value[user_message.split(' ')[-1]] = [{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]
 
     if raw_value['command'] == 'image':
         # openAI Dalle
@@ -99,9 +96,9 @@ def create_item(item: Item):
 
         send_message(phone_number, image_url, 'image')
     
-    elif raw_value['command'] == 'text':
+    else:
         # get last messages
-        messages = raw_value['prompt']
+        messages = raw_value[raw_value['command']]
         messages.append({"role": "user", "content": f"{user_message}"})
 
         # openAI chat completition
@@ -118,7 +115,7 @@ def create_item(item: Item):
 
         # Append message to list
         messages.append({"role": "assistant", "content": f"{ai_message}"})
-        raw_value['prompt'] = messages
+        raw_value[raw_value['command']] = messages
 
         # Upload messages to redis db
         redis.set(phone_number, json.dumps(raw_value))
