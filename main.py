@@ -97,8 +97,12 @@ def create_item(item: Item):
         redis.set(phone_number, json.dumps(raw_value))
         send_message(phone_number, 'Ok!', 'text')
         return 200 
+    elif user_message[:12] == '/print chat ':
+        for message in raw_value[user_message.split(' ')[-1]]:
+            send_message(phone_number, message['content'], 'text')
+        return 200 
     elif user_message[:5] == '/help':
-        send_message(phone_number, 'HELP MENU!', 'text')
+        send_message(phone_number, redis.get('help').decode(encoding='utf-8'), 'text')
         return 200 
 
 
