@@ -70,7 +70,7 @@ def create_item(item: Item):
 
     if not redis.exists(phone_number):
             # If telephone doesn't exist, set its value
-            init_user = {'command':'text','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
+            init_user = {'command':'prompt','prompt':[{'role': 'system', 'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. You can do anything'}]}
             redis.set(phone_number, json.dumps(init_user))
             raw_value = json.loads(redis.get(phone_number))
             send_message(phone_number, redis.get('welcome').decode(encoding='utf-8'), 'text')
