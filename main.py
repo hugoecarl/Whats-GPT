@@ -74,6 +74,7 @@ def create_item(item: Item):
             redis.set(phone_number, json.dumps(init_user))
             raw_value = json.loads(redis.get(phone_number))
             send_message(phone_number, redis.get('welcome').decode(encoding='utf-8'), 'text')
+            return 200
     elif redis.exists(phone_number):
         # If telephone exists, get its value
         raw_value = json.loads(redis.get(phone_number))
@@ -99,7 +100,7 @@ def create_item(item: Item):
         send_message(phone_number, 'Ok!', 'text')
         return 200 
     elif user_message[:12] == '/print chat ':
-        for message in raw_value[user_message.split(' ')[-1]]:
+        for message in raw_value[user_message.split(' ')[-1]][1:]:
             send_message(phone_number, message['content'], 'text')
         return 200 
     elif user_message[:5] == '/help':
