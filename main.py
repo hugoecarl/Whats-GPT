@@ -38,7 +38,7 @@ class Item(BaseModel):
 # Fast api instance
 app = FastAPI()
 
-# Whatsapp api authentication
+# WhatsApp api authentication
 @app.get("/api")
 def read_root(request: Request):
     return int(request.query_params.get('hub.challenge'))
